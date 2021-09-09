@@ -2,27 +2,31 @@
 #include <fstream>
 #include <string>
 
-#define MAX_KEY_SIZE 18
-#define MAX_TEXT_SIZE 1000
+#define MAX_KEY_SIZE 10
+#define MAX_TEXT_SIZE 100000
 #define NO_OF_CHARACTERS 26
+
+#define PLAIN_TEXT_FILE_PATH "./Sample/PlainText.txt"
+#define CIPHER_TEXT_FILE_PATH "./Sample/CipherText.txt"
+#define KEY_FILE_PATH "./Sample/Key.txt"
 
 class Encryption
 {
 public:
     int pLength, plainText[MAX_TEXT_SIZE], N, K[MAX_KEY_SIZE][MAX_KEY_SIZE], cipherText[MAX_TEXT_SIZE];
 
-    void getPlainText()
+    void getPlainText()                 
     {
+        //inputs the plain text from the file PLAIN_TEXT_FILE_PATH by ignoring the non-alphabetic characters and stores alphabets as integer in range 0-25
         std::string str;
+
+        //input plain text
         std::ifstream fin;
-        fin.open("PlainText.txt");
+        fin.open(PLAIN_TEXT_FILE_PATH);
         std::getline(fin, str);
         fin.close();
-        if (str.length() == 0)
-        {
-            std::cout << "Length of plain text must be atleast 1. Please enter a valid plain text.\n";
-            exit(0);
-        }
+
+        //ignoring the non-aplhabetic characters and storing the integer value of alphabetic characters in the range 0-25
         pLength = 0;
         for (int i = 0; i < str.length(); ++i)
         {
@@ -37,87 +41,63 @@ public:
                 pLength++;
             }
         }
+
+        //checking if the plain text is of length atleast 1
+        if (pLength == 0)
+        {
+            std::cout << "Length of plain text must be atleast 1. Please enter a valid plain text.\n";
+            exit(0);
+        }
     }
 
     void getKey()
     {
-        std::string str;
-        int r, c;
-        bool invalidKey = false;
+        //inputs the key from the file KEY_FILE_PATH by taking first integer as key size and the rest as elements of the key
         std::ifstream fin;
-        fin.open("Key.txt");
-        fin >> N;
-        if (N < 2 || N > 10)
+        fin.open(KEY_FILE_PATH);
+
+        //input key size
+        fin >> N;           
+
+        //checking if the key size is of appropriate size or not
+        if (N < 2 || N > MAX_KEY_SIZE)
         {
-            std::cout << "Key size must be between 2-10. Please enter a valid key size.\n";
+            std::cout << "Key size must be between 2-" <<MAX_KEY_SIZE << ". Please enter a valid key size.\n";
             exit(0);
         }
+
+        //input elements of the key
         for (int i = 0; i < N; ++i)
             for (int j = 0; j < N; ++j)
-            {
                 fin >> K[i][j];
-                if (K[i][j] >= 65 && K[i][j] <= 90)
-                    K[i][j] -= 65;
-                else if (K[i][j] >= 97 && K[i][j] <= 122)
-                    K[i][j] -= 97;
-            }
-        if (determinant(K, N) == 0)
+        
+
+        //calculating determinant of the key matrix and checking whether it is non-singular or not
+        int det = determinant(K, N);
+        if (det == 0)
         {
             std::cout << "This key can't be used as it produces a singular matrix. Please enter a new valid key.\n";
             exit(0);
         }
-        else if (modInverse(determinant(K, N), NO_OF_CHARACTERS) == -1)
+
+        //in case determinant of key matrix is non-singular then it's inverse modulus NO_OF_CHARACTERS must also exist
+        else if (modInverse(det, NO_OF_CHARACTERS) == -1)
         {
             std::cout << "This key can't be used as Inverse of determinant mod " << NO_OF_CHARACTERS << " doesn't exist. Please enter a new valid key.\n";
             exit(0);
         }
+
         fin.close();
-    }
-
-    void calcCipherText()
-    {
-        int tempPT[MAX_KEY_SIZE];
-        int i, j, k;
-        for (i = 0; i <= pLength / N; ++i)
-        {
-            for (j = 0; j < N; ++j)
-            {
-                if ((N * i + j) >= pLength)
-                    tempPT[j] = 23;
-                else
-                    tempPT[j] = plainText[N * i + j];
-            }
-            for (j = 0; j < N; ++j)
-            {
-                cipherText[N * i + j] = 0;
-                for (k = 0; k < N; ++k)
-                    cipherText[N * i + j] += K[j][k] * tempPT[k];
-                cipherText[N * i + j] %= 26;
-            }
-        }
-        pLength += pLength % N ? N - pLength % N : 0;
-    }
-
-    void printCipherText()
-    {
-        std::ofstream fout;
-        fout.open("CipherText.txt");
-        std::string str = "";
-        for (int i = 0; i < pLength; ++i)
-            str += char(cipherText[i] + 65);
-        fout << str;
-        fout.close();
     }
 
     int determinant(int A[MAX_KEY_SIZE][MAX_KEY_SIZE], int size)
     {
+        //to calculate the determinant of the argumented matrix
         if (size == 1)
-        {
             return A[0][0];
-        }
-        int i, det = 0;
-        int temp[MAX_KEY_SIZE][MAX_KEY_SIZE];
-        int sign = 1;
+
+        int i, det = 0, sign = 1, temp[MAX_KEY_SIZE][MAX_KEY_SIZE];
+        
         for (i = 0; i < size; ++i)
         {
             getCofactor(A, temp, 0, i, size);
@@ -129,21 +109,22 @@ public:
 
     int modInverse(int a, int n)
     {
+        //calculates a^(-1) mod n
         while (a < 0)
             a += n;
-        int i;
-        for (i = 1; i < n; ++i)
-        {
+        
+        for (int i = 1; i < n; ++i)
             if (a * i % n == 1)
                 return i;
-        }
-        if (i == n)
-            return -1;
+
+        return -1;
     }
 
     void getCofactor(int A[MAX_KEY_SIZE][MAX_KEY_SIZE], int temp[MAX_KEY_SIZE][MAX_KEY_SIZE], int m, int n, int size)
     {
+        //calculates the cofactor of given element of given matrix
         int i, j, r = 0, c = 0;
+        
         for (i = 0; i < size; ++i)
             for (j = 0; j < size; ++j)
                 if (i != m && j != n)
@@ -155,6 +136,54 @@ public:
                         c = 0;
                     }
                 }
+    }
+
+    void calcCipherText()
+    {
+        //calculating the cipher text by matrix multiplication of key matrix and plain text sub-matrix (of size keySize)
+        int i, j, k, tempPT[MAX_KEY_SIZE];
+
+        //plain text is divided into plainTextSize/keySize no. of blocks and for each such block, cipher text is calculated
+        for (i = 0; i <= pLength / N; ++i)
+        {
+            for (j = 0; j < N; ++j)
+            {
+                //in case plain text size is not a mulitple of keySize, then it is made to be so by appending 23 (i.e. X) appropriate no of times 
+                if ((N * i + j) >= pLength)
+                    tempPT[j] = 23;
+
+                //else plain text is copied into temporary plain text matrix
+                else
+                    tempPT[j] = plainText[N * i + j];
+            }
+
+            //matrix multiplication of key matrix and temporary plain text matrix to calculate cipher text
+            for (j = 0; j < N; ++j)
+            {
+                cipherText[N * i + j] = 0;
+                for (k = 0; k < N; ++k)
+                    cipherText[N * i + j] += K[j][k] * tempPT[k];
+                cipherText[N * i + j] %= 26;
+            }
+        }
+
+        //in case plain text size is not a mulitple of keySize, then it is made to be so
+        pLength += pLength % N ? N - pLength % N : 0;
+    }
+
+    void printCipherText()
+    {
+        //calculated cipher text is written into the CIPHER_TEXT_FILE_PATH file by transforming so formed cipher text into ASCII valued cipher text 
+        std::ofstream fout;
+        fout.open(CIPHER_TEXT_FILE_PATH);
+
+        std::string str = "";
+        for (int i = 0; i < pLength; ++i)
+            str += char(cipherText[i] + 65);
+
+        fout << str;
+
+        fout.close();
     }
 };
 
